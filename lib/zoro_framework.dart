@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_boost/flutter_boost.dart';
+import 'package:onepiece_zoro/main.dart';
 
 /// 针对 FlutterBoost 的问题再上层封装一层
 /// 问题：
@@ -9,6 +10,9 @@ import 'package:flutter_boost/flutter_boost.dart';
 /// 功能：
 ///   - 实现 push()、pop(String num)、popUntil(String routeName)、replace() 接口
 ///   - 统一 AppBar
+/// 顺带解决：
+///   - FPS 统一监测
+///   - 页面加载市场问题
 
 class Zoro {
 
@@ -34,7 +38,7 @@ class Zoro {
     Map<String, dynamic> appBarConfig
   ) {
     return (String pageName, Map<String, dynamic> params, String uniqueId) {
-      return StatelessWidgetWithDefaultAppBar(
+      return WidgetWithDefaultAppBar(
         child: builder(pageName, params, uniqueId),
         appBarConfig: appBarConfig,
         flutterBoost: flutterBoost,
@@ -122,7 +126,7 @@ class BuilderConfig {
   });
 }
 
-class StatelessWidgetWithDefaultAppBar extends StatelessWidget {
+class WidgetWithDefaultAppBar extends StatefulWidget {
 
   final Widget child;
   final Map<String, dynamic> appBarConfig;
@@ -130,28 +134,40 @@ class StatelessWidgetWithDefaultAppBar extends StatelessWidget {
   final String pageName;
   final String uniqueId;
 
-  const StatelessWidgetWithDefaultAppBar({
+  /// 页面加载时间戳
+  int startTime;
+  /// 页面首次渲染完毕时间戳
+  int renderedTime;
+
+  WidgetWithDefaultAppBar({
     Key key,
     @required this.child,
     this.appBarConfig,
     this.flutterBoost,
     this.pageName,
     this.uniqueId,
-  }) : super(key: key);
+  }) : super(key: key) {
+    startTime = DateTime.now().millisecondsSinceEpoch;
+  }
 
+  _WidgetWithDefaultAppBarState createState() =>
+      _WidgetWithDefaultAppBarState();
+}
+
+class _WidgetWithDefaultAppBarState extends State<WidgetWithDefaultAppBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: buildAppBar(),
-      body: child,
+      body: widget.child,
     );
   }
 
   buildAppBar() {
-    if (appBarConfig == null) {
+    if (widget.appBarConfig == null) {
       return null;
     }
-    var title = appBarConfig['title'];
+    var title = widget.appBarConfig['title'];
     return AppBar(
       brightness: Brightness.light,
       backgroundColor: Colors.white,
@@ -163,9 +179,32 @@ class StatelessWidgetWithDefaultAppBar extends StatelessWidget {
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios, color: Colors.black,),
         onPressed: () {
-          flutterBoost.close(uniqueId);
+          widget.flutterBoost.close(widget.uniqueId);
         },
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    /// 检测 FPS
+    FPS.startWatch((double fps) {
+      print('-------- page: ${widget.pageName} ++++ fps: $fps --------');
+    });
+
+    /// 该帧渲染完会回调 addPostFrameCallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.renderedTime = DateTime.now().millisecondsSinceEpoch;
+      int timeSpend = widget.renderedTime - widget.startTime;
+      print('-------- page: ${widget.pageName} ++++ timeSpend: $timeSpend ms --------');
+    });
+  }
+
+  @override
+  void dispose() {
+    FPS.endWatch();
+    super.dispose();
   }
 }
