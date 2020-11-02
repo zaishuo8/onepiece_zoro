@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_boost/flutter_boost.dart';
 import 'package:onepiece_zoro/fps_page.dart';
+import 'package:onepiece_zoro/version_page.dart';
 import 'error_catch_page.dart';
 import 'simple_page_widgets.dart';
 import 'zoro_framework.dart';
@@ -171,6 +172,12 @@ class _MyAppState extends State<MyApp> {
           return FPSPage(params: params);
         },
         appBarConfig: FPSPage.appBarConfig,
+      ),
+      VersionPage.pageName: BuilderConfig(
+        builder: (String pageName, Map<String, dynamic> params, String _) {
+          return VersionPage(params: params);
+        },
+        appBarConfig: VersionPage.appBarConfig,
       ),
     });
 
