@@ -83,7 +83,7 @@ class _ZoroFlutterPage extends State<ZoroFlutterPage> {
                     onPressed: () => Zoro.push(ZoroFlutterPage2.pageName, urlParams: {
                       'name': 'Jhon',
                       /// urlParams 布尔类型的参数会报错，exts 是参数可以
-                      'boolParam': true,
+                      /// 'boolParam': true,
                     }),
                   ),
                   FlatButton(

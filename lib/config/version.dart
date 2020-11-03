@@ -1,1 +1,1 @@
-class Version { static String versionNumber = "1.0.0"; }
+class Version { static String versionNumber = "3.0.0"; }

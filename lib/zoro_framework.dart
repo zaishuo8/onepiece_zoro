@@ -3,6 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_boost/flutter_boost.dart';
 import 'package:onepiece_zoro/main.dart';
 
+import 'utils/device.dart';
+import 'utils/http.dart';
+
 /// 针对 FlutterBoost 的问题再上层封装一层
 /// 问题：
 ///   - 缺少 replace popUntil close多个页面的接口
@@ -155,6 +158,34 @@ class WidgetWithDefaultAppBar extends StatefulWidget {
 }
 
 class _WidgetWithDefaultAppBarState extends State<WidgetWithDefaultAppBar> {
+
+  List<double> fpsList = List<double>();
+  reportFps() {
+    final deviceInfo = DeviceUtil.getDeviceInfo();
+    HttpUtil.post(HttpConfig.monitorReport, body: {
+      'type': 2,
+      'appId': 1,
+      'phoneType': deviceInfo.phoneType,
+      'phoneOs': deviceInfo.phoneOs,
+      'phoneOsVersion': deviceInfo.phoneOsVersion,
+      'pageName': widget.pageName,
+      'fps': fpsList,
+    });
+  }
+
+  reportLoadDuration() {
+    final deviceInfo = DeviceUtil.getDeviceInfo();
+    HttpUtil.post(HttpConfig.monitorReport, body: {
+      'type': 3,
+      'appId': 1,
+      'phoneType': deviceInfo.phoneType,
+      'phoneOs': deviceInfo.phoneOs,
+      'phoneOsVersion': deviceInfo.phoneOsVersion,
+      'pageName': widget.pageName,
+      'duration': widget.renderedTime - widget.startTime,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,6 +223,7 @@ class _WidgetWithDefaultAppBarState extends State<WidgetWithDefaultAppBar> {
     /// 检测 FPS
     FPS.startWatch((double fps) {
       print('-------- page: ${widget.pageName} ++++ fps: $fps --------');
+      fpsList.add(fps);
     });
 
     /// 该帧渲染完会回调 addPostFrameCallback
@@ -199,12 +231,14 @@ class _WidgetWithDefaultAppBarState extends State<WidgetWithDefaultAppBar> {
       widget.renderedTime = DateTime.now().millisecondsSinceEpoch;
       int timeSpend = widget.renderedTime - widget.startTime;
       print('-------- page: ${widget.pageName} ++++ timeSpend: $timeSpend ms --------');
+      reportLoadDuration();
     });
   }
 
   @override
   void dispose() {
     FPS.endWatch();
+    reportFps();
     super.dispose();
   }
 }

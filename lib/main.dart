@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_boost/flutter_boost.dart';
 import 'package:onepiece_zoro/fps_page.dart';
+import 'package:onepiece_zoro/utils/device.dart';
+import 'package:onepiece_zoro/utils/http.dart';
 import 'package:onepiece_zoro/version_page.dart';
 import 'error_catch_page.dart';
 import 'simple_page_widgets.dart';
@@ -14,11 +16,28 @@ import 'zoro_page_3.dart';
 import 'zoro_page_4.dart';
 import 'zoro_page_vr.dart';
 
-class Statistics {
+class ErrorStatistics {
   /// 错误发生数量统计
   static int errorCount = 0;
   /// 页面打开次数统计
   static int pagePV = 0;
+  /// 上报错误率
+  static startReportErrorRate() {
+    final deviceInfo = DeviceUtil.getDeviceInfo();
+    Timer.periodic(Duration(minutes: 1), (t) async {
+      final double rate = pagePV == 0 ? 0 : errorCount / pagePV;
+      await HttpUtil.post(HttpConfig.monitorReport, body: {
+        'type': 1,
+        'appId': 1,
+        'phoneType': deviceInfo.phoneType,
+        'phoneOs': deviceInfo.phoneOs,
+        'phoneOsVersion': deviceInfo.phoneOsVersion,
+        'errorRate': rate,
+      });
+      errorCount = 0;
+      pagePV = 0;
+    });
+  }
 }
 
 typedef FpsWatchCallback = void Function(double fps);
@@ -92,12 +111,12 @@ class FPS {
 
 void _reportError(dynamic e, StackTrace stack) {
   /// 统一错误处理
-  Statistics.errorCount++;
-  print('--- 错误发生总数: ${Statistics.errorCount} ----');
-  print('--- 页面打开总数: ${Statistics.pagePV} ---');
+  ErrorStatistics.errorCount++;
+  print('--- 错误发生总数: ${ErrorStatistics.errorCount} ----');
+  print('--- 页面打开总数: ${ErrorStatistics.pagePV} ---');
   print('--- 页面错误率 ---');
-  if (Statistics.pagePV == 0) Statistics.pagePV++;
-  print('--- 页面错误率: ${Statistics.errorCount / Statistics.pagePV} ---');
+  if (ErrorStatistics.pagePV == 0) ErrorStatistics.pagePV++;
+  print('--- 页面错误率: ${ErrorStatistics.errorCount / ErrorStatistics.pagePV} ---');
   print('--- 统一错误处理: $e ---');
   print('--- 错误栈: $stack ---');
 }
@@ -113,6 +132,8 @@ void main() {
     /// 转发到 Zone 中统一处理
     Zone.current.handleUncaughtError(details.exception, details.stack);
   };
+
+  ErrorStatistics.startReportErrorRate();
 }
 
 class MyApp extends StatefulWidget {
@@ -248,7 +269,7 @@ class BoostNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic> previousRoute) {
     print('flutterboost#didPush');
-    Statistics.pagePV++;
+    ErrorStatistics.pagePV++;
   }
 
   @override
